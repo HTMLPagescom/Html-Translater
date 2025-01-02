@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Untitled Beto's Translator!</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            flex-direction: column;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            width: 400px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            font-family: 'Arial', sans-serif;
+        }
+        .input-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        textarea {
+            width: 80%;  /* Adjusted to leave space for the microphone */
+            height: 120px;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 8px;
+            border: none;
+            resize: none;
+            font-size: 16px;
+        }
+        #micButton {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            margin-left: 10px; /* Space between text area and icon */
+        }
+        #micButton img {
+            width: 50px;  /* Icon size */
+        }
+        select, button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 16px;
+            border: none;
+            background-color: #2575fc;
+            color: white;
+            cursor: pointer;
+        }
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+            margin-top: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #outputText {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 8px;
+            color: #333;
+            font-size: 18px;
+            display: none;
+        }
+        .logo {
+            width: 100px;  /* Adjust logo size */
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Logo -->
+<img src="https://cdn2.iconfinder.com/data/icons/web-store-crayons-volume-1/256/Language-512.png" alt="Logo" class="logo">
+
+<div class="container">
+    <h1>Untitled Beto's Translator!</h1>
+    <div class="input-container">
+        <textarea id="inputText" placeholder="Type here the text to translate..."></textarea>
+        
+        <!-- Microphone button next to the input field -->
+        <div>
+            <p>Click the microphone to speak</p>
+            <button id="micButton" onclick="startSpeechRecognition()">
+                <img src="https://images.emojiterra.com/google/android-12l/512px/1f3a4.png" alt="Microphone">
+            </button>
+        </div>
+    </div>
+    
+    <select id="sourceLanguage">
+        <option value="es">Spanish</option>
+        <option value="en">English</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="it">Italian</option>
+        <option value="pt">Portuguese</option>
+    </select>
+
+    <select id="targetLanguage">
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="it">Italian</option>
+        <option value="pt">Portuguese</option>
+    </select>
+
+    <button id="translateButton" onclick="translateText()">Translate</button>
+
+    <div class="loader" id="loader"></div>
+
+    <div id="outputText"></div>
+</div>
+
+<script>
+    // Translation function
+    function translateText() {
+        const inputText = document.getElementById('inputText').value;
+        const sourceLang = document.getElementById('sourceLanguage').value;
+        const targetLang = document.getElementById('targetLanguage').value;
+
+        if (!inputText.trim()) {
+            document.getElementById('outputText').style.display = 'none';
+            alert("Please enter text to translate.");
+            return;
+        }
+
+        // Check to avoid unnecessary translations
+        if (sourceLang === targetLang) {
+            document.getElementById('outputText').innerText = "The source and target languages are the same. No translation needed.";
+            document.getElementById('outputText').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('outputText').style.display = 'none';
+        document.getElementById('translateButton').disabled = true;
+
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(inputText)}&langpair=${sourceLang}|${targetLang}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const translatedText = data.responseData.translatedText;
+
+                // Check if translation is the same as the input text
+                if (translatedText.trim().toLowerCase() === inputText.trim().toLowerCase()) {
+                    document.getElementById('outputText').innerText = `The translation is the same as the original text: "${inputText}". This can happen when no translation is needed.`;
+                } else {
+                    document.getElementById('outputText').innerText = translatedText;
+                }
+
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('outputText').style.display = 'block';
+                document.getElementById('translateButton').disabled = false;
+
+                // Read out the translated text automatically
+                readText();
+            })
+            .catch(error => {
+                console.error('Error translating:', error);
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('outputText').style.display = 'block';
+                document.getElementById('outputText').innerText = 'Error translating the text.';
+                document.getElementById('translateButton').disabled = false;
+            });
+    }
+
+    // Start speech recognition function
+    function startSpeechRecognition() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+
+        recognition.lang = 'es-ES';  // You can change the language here, 'es-ES' for Spanish
+        recognition.start();
+
+        recognition.onresult = function(event) {
+            const spokenText = event.results[0][0].transcript;
+            document.getElementById('inputText').value = spokenText;
+            translateText();  // Automatically translate after speaking
+        };
+
+        recognition.onerror = function(event) {
+            alert("Error with speech recognition. Please try again.");
+        };
+    }
+
+    // Read out the translated text
+    function readText() {
+        const text = document.getElementById('outputText').innerText;
+        const speech = new SpeechSynthesisUtterance(text);
+        const language = document.getElementById('targetLanguage').value;
+
+        speech.lang = language === 'es' ? 'es-ES' : (language === 'en' ? 'en-US' : 'fr-FR');  // Adjust for language
+        window.speechSynthesis.speak(speech);
+    }
+
+    // Read the translated text on click
+    document.getElementById('outputText').addEventListener('click', readText);
+</script>
+
+</body>
+</html>
